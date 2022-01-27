@@ -12,6 +12,7 @@ find_package(catkin REQUIRED
     rosconsole_bridge
     roscpp
     socketcan_interface
+    bondcpp
 )
 
 catkin_package(
