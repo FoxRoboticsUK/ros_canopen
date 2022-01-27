@@ -25,17 +25,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <bondcpp/bond.h>
 #include <ros/ros.h>
-#include <socketcan_bridge/topic_to_socketcan.h>
 #include <socketcan_bridge/socketcan_to_topic.h>
+#include <socketcan_bridge/topic_to_socketcan.h>
 #include <socketcan_interface/threading.h>
 #include <socketcan_interface/xmlrpc_settings.h>
+
 #include <memory>
 #include <string>
 
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   ros::init(argc, argv, "socketcan_bridge_node");
 
   ros::NodeHandle nh(""), nh_param("~");
@@ -43,21 +43,23 @@ int main(int argc, char *argv[])
   std::string can_device;
   nh_param.param<std::string>("can_device", can_device, "can0");
 
-  can::ThreadedSocketCANInterfaceSharedPtr driver = std::make_shared<can::ThreadedSocketCANInterface> ();
+  bond::Bond bond("socketcan_bridge_bond", "socketcan_bridge_id");
+  bond.start();
+
+  can::ThreadedSocketCANInterfaceSharedPtr driver =
+      std::make_shared<can::ThreadedSocketCANInterface>();
 
   // initialize device at can_device, 0 for no loopback.
-  if (!driver->init(can_device, 0, XmlRpcSettings::create(nh_param)))
-  {
+  if (!driver->init(can_device, 0, XmlRpcSettings::create(nh_param))) {
     ROS_FATAL("Failed to initialize can_device at %s", can_device.c_str());
     return 1;
-  }
-    else
-  {
+  } else {
     ROS_INFO("Successfully connected to %s.", can_device.c_str());
   }
 
   // initialize the bridge both ways.
-  socketcan_bridge::TopicToSocketCAN to_socketcan_bridge(&nh, &nh_param, driver);
+  socketcan_bridge::TopicToSocketCAN to_socketcan_bridge(&nh, &nh_param,
+                                                         driver);
   to_socketcan_bridge.setup();
 
   socketcan_bridge::SocketCANToTopic to_topic_bridge(&nh, &nh_param, driver);
@@ -65,6 +67,7 @@ int main(int argc, char *argv[])
 
   ros::spin();
 
+  bond.~Bond();
   driver->shutdown();
   driver.reset();
 
